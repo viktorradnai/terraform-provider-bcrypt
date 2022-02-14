@@ -1,0 +1,14 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+**/.terraform.plan
+**/.terraform.plan*
+
+# MacOS
+.history
+.DS_Store
+
+go.sum
+*.bak
