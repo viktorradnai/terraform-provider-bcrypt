@@ -82,7 +82,7 @@ func resourceHash() *schema.Resource {
 		Delete: resourceDeleteHash,
 		Exists: resourceExistsHash,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			State: resourceImportHash,
 		},
 	}
 }
@@ -105,8 +105,8 @@ func resourceCreateHash(d *schema.ResourceData, m interface{}) error {
 
 	// err := apiClient.NewItem(&item)
 
-
-	hash, err := createHash(d.Get("cleartext").(string), d.Get("cost").(int))
+	cost := d.Get("cost").(int)
+	hash, err := createHash(d.Get("cleartext").(string), cost)
 
 	if err != nil {
 		return err
@@ -114,6 +114,7 @@ func resourceCreateHash(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(hash)
 	d.Set("hash", hash)
+	d.Set("cost", cost)
 	return nil
 }
 
@@ -178,4 +179,16 @@ func resourceExistsHash(d *schema.ResourceData, m interface{}) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+
+func resourceImportHash(d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	var da []*schema.ResourceData
+
+	hash := d.Id()
+	d.Set("cleartext", hash)
+	d.Set("cost", 10)
+
+	da = append(da, d)
+	return da, nil
 }
