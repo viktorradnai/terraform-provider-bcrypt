@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"context"
 	"regexp"
+	"strconv"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -25,6 +26,11 @@ func validateName(v interface{}, k string) (ws []string, es []error) {
 		return warns, errs
 	}
 	return warns, errs
+}
+
+
+func getCostFromBcryptHash(hash string) (int, error) {
+	return strconv.Atoi(hash[4:6])
 }
 
 
@@ -83,14 +89,14 @@ func resourceHash() *schema.Resource {
 		DeleteContext: resourceDeleteHash,
 		Exists: resourceExistsHash,
 		Importer: &schema.ResourceImporter{
-			// StateContext: resourceImportHash,
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceImportHash,
 		},
 	}
 }
 
 
 func resourceCreateHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Running ResourceCreate\n")
 	cost := d.Get("cost").(int)
 	hash, err := createHash(ctx, d.Get("cleartext").(string), cost)
 
@@ -105,7 +111,7 @@ func resourceCreateHash(ctx context.Context, d *schema.ResourceData, m interface
 
 
 func resourceReadHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
+	tflog.Info(ctx, "Running ResourceRead\n")
 	// hash := d.Id()
 	// d.SetId(hash)
 
@@ -155,12 +161,21 @@ func resourceExistsHash(d *schema.ResourceData, m interface{}) (bool, error) {
 }
 
 
-func resourceImportHash(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, diag.Diagnostics) {
+func resourceImportHash(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	var da []*schema.ResourceData
 
 	hash := d.Id()
-	d.Set("cleartext", hash)
-	d.Set("cost", 10)
+	cleartext := d.Get("cleartext").(string)
+	tflog.Info(ctx, "Running ResourceImport\n")
+
+	cost, err := getCostFromBcryptHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	tflog.Info(ctx, hash)
+	tflog.Info(ctx, cleartext)
+	d.Set("cleartext", "")
+	d.Set("cost", cost)
 
 	da = append(da, d)
 	return da, nil
