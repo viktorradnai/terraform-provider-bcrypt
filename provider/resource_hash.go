@@ -3,10 +3,12 @@ package provider
 import (
 	"fmt"
 	"log"
+	"context"
 	"regexp"
-	"strings"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 
@@ -27,11 +29,11 @@ func validateName(v interface{}, k string) (ws []string, es []error) {
 }
 
 
-func createHash(clear string, cost int) (string, error) {
+func createHash(ctx context.Context, clear string, cost int) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(clear), cost)
 
 	if err != nil {
-		log.Println(err)
+		tflog.Error(ctx, err.Error())
 		return "", err
 	}
 
@@ -41,11 +43,11 @@ func createHash(clear string, cost int) (string, error) {
 }
 
 
-func compareHash(hash string, clear string) bool {
+func compareHash(ctx context.Context, hash string, clear string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(clear))
 
 	if err != nil {
-		log.Println(err)
+		tflog.Error(ctx, err.Error())
 		return false
 	}
 
@@ -61,7 +63,7 @@ func resourceHash() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The string to hash",
-				ForceNew:    true,
+				ForceNew:    false,
 				Sensitive: 		true,
 			},
 			"cost": {
@@ -76,50 +78,34 @@ func resourceHash() *schema.Resource {
 			// 	Description:  "The hashed value",
 			// },
 		},
-		Create: resourceCreateHash,
-		Read:   resourceReadHash,
-		Update: resourceUpdateHash,
-		Delete: resourceDeleteHash,
+		CreateContext: resourceCreateHash,
+		ReadContext:   resourceReadHash,
+		UpdateContext: resourceUpdateHash,
+		DeleteContext: resourceDeleteHash,
 		Exists: resourceExistsHash,
 		Importer: &schema.ResourceImporter{
-			State: resourceImportHash,
+			// StateContext: resourceImportHash,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 	}
 }
 
 
-func resourceCreateHash(d *schema.ResourceData, m interface{}) error {
-	// apiClient := m.(*client.Client)
-
-	// tfTags := d.Get("tags").(*schema.Set).List()
-	// tags := make([]string, len(tfTags))
-	// for i, tfTag := range tfTags {
-	// 	tags[i] = tfTag.(string)
-	// }
-
-	// item := server.Item{
-	// 	Name:        d.Get("name").(string),
-	// 	Description: d.Get("description").(string),
-	// 	Tags:        tags,
-	// }
-
-	// err := apiClient.NewItem(&item)
-
+func resourceCreateHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cost := d.Get("cost").(int)
-	hash, err := createHash(d.Get("cleartext").(string), cost)
+	hash, err := createHash(ctx, d.Get("cleartext").(string), cost)
 
 	if err != nil {
-		return err
+		tflog.Error(ctx, err.Error())
+		return diag.FromErr(err)
 	}
 
 	d.SetId(hash)
-	d.Set("hash", hash)
-	d.Set("cost", cost)
 	return nil
 }
 
 
-func resourceReadHash(d *schema.ResourceData, m interface{}) error {
+func resourceReadHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	// hash := d.Id()
 	// d.SetId(hash)
@@ -128,27 +114,27 @@ func resourceReadHash(d *schema.ResourceData, m interface{}) error {
 }
 
 
-func resourceUpdateHash(d *schema.ResourceData, m interface{}) error {
+func resourceUpdateHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	if compareHash(d.Id(), d.Get("cleartext").(string)) {
+	if compareHash(ctx, d.Id(), d.Get("cleartext").(string)) {
 		log.Println("Cleartext unchanged")
 		return nil
 	}
 
-	hash, err := createHash(d.Get("cleartext").(string), d.Get("cost").(int))
+	hash, err := createHash(ctx, d.Get("cleartext").(string), d.Get("cost").(int))
 
 	if err != nil {
-		return err
+		tflog.Error(ctx, err.Error())
+		return diag.FromErr(err)
 	}
 
 	d.SetId(hash)
-	d.Set("hash", hash)
 
 	return nil
 }
 
 
-func resourceDeleteHash(d *schema.ResourceData, m interface{}) error {
+func resourceDeleteHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// apiClient := m.(*client.Client)
 
 	// itemId := d.Id()
@@ -157,7 +143,8 @@ func resourceDeleteHash(d *schema.ResourceData, m interface{}) error {
 
 	var err error
 	if err != nil {
-		return err
+		tflog.Error(ctx, err.Error())
+		return diag.FromErr(err)
 	}
 	d.SetId("")
 	return nil
@@ -165,24 +152,11 @@ func resourceDeleteHash(d *schema.ResourceData, m interface{}) error {
 
 
 func resourceExistsHash(d *schema.ResourceData, m interface{}) (bool, error) {
-	// apiClient := m.(*client.Client)
-
-	// itemId := d.Id()
-	// _, err := apiClient.GetItem(itemId)
-	var err error
-
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return false, nil
-		} else {
-			return false, err
-		}
-	}
 	return true, nil
 }
 
 
-func resourceImportHash(d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func resourceImportHash(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, diag.Diagnostics) {
 	var da []*schema.ResourceData
 
 	hash := d.Id()
