@@ -34,11 +34,10 @@ func getCostFromBcryptHash(hash string) (int, error) {
 }
 
 
-func createHash(ctx context.Context, clear string, cost int) (string, error) {
+func createHash(clear string, cost int) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(clear), cost)
 
 	if err != nil {
-		tflog.Error(ctx, err.Error())
 		return "", err
 	}
 
@@ -48,11 +47,10 @@ func createHash(ctx context.Context, clear string, cost int) (string, error) {
 }
 
 
-func compareHash(ctx context.Context, hash string, clear string) bool {
+func compareHash(hash string, clear string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(clear))
 
 	if err != nil {
-		tflog.Error(ctx, err.Error())
 		return false
 	}
 
@@ -98,7 +96,7 @@ func resourceHash() *schema.Resource {
 func resourceCreateHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	tflog.Info(ctx, "Running ResourceCreate\n")
 	cost := d.Get("cost").(int)
-	hash, err := createHash(ctx, d.Get("cleartext").(string), cost)
+	hash, err := createHash(d.Get("cleartext").(string), cost)
 
 	if err != nil {
 		tflog.Error(ctx, err.Error())
@@ -121,12 +119,12 @@ func resourceReadHash(ctx context.Context, d *schema.ResourceData, m interface{}
 
 func resourceUpdateHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	if compareHash(ctx, d.Id(), d.Get("cleartext").(string)) {
+	if compareHash(d.Id(), d.Get("cleartext").(string)) {
 		tflog.Info(ctx, "Cleartext unchanged")
 		return nil
 	}
 
-	hash, err := createHash(ctx, d.Get("cleartext").(string), d.Get("cost").(int))
+	hash, err := createHash(d.Get("cleartext").(string), d.Get("cost").(int))
 
 	if err != nil {
 		tflog.Error(ctx, err.Error())
