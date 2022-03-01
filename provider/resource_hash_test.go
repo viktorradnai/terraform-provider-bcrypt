@@ -2,129 +2,93 @@ package provider
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"regexp"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"testing"
 )
 
 
-func TestAccItem_Basic(t *testing.T) {
+func TestHash_Basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckItemDestroy,
+		PreCheck:     func() { testHashPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy: testHashCheckItemDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckItemBasic(),
+				Config: testHashCheckItemBasic(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckBcryptHashExists("bcrypt_hash.test_item"),
+					testHashCheckBcryptHashExists("bcrypt_hash.test_item"),
 					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_item", "cleartext", "test"),
+						"bcrypt_hash.test_item", "cleartext", "hello"),
 					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_item", "description", "hello"),
-					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_item", "tags.#", "2"),
-					resource.TestCheckResourceAttr("bcrypt_hash.test_item", "tags.1931743815", "tag1"),
-					resource.TestCheckResourceAttr("bcrypt_hash.test_item", "tags.1477001604", "tag2"),
+						"bcrypt_hash.test_item", "cost", "10"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccItem_Update(t *testing.T) {
+
+func TestHash_Update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckItemDestroy,
+		PreCheck:     func() { testHashPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy: testHashCheckItemDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckItemUpdatePre(),
+				Config: testHashCheckItemUpdatePre(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckBcryptHashExists("bcrypt_hash.test_update"),
+					testHashCheckBcryptHashExists("bcrypt_hash.test_update"),
 					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_update", "cleartext", "test_update"),
+						"bcrypt_hash.test_update", "cleartext", "hello_pre_update"),
 					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_update", "description", "hello"),
-					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_update", "tags.#", "2"),
-					resource.TestCheckResourceAttr("bcrypt_hash.test_update", "tags.1931743815", "tag1"),
-					resource.TestCheckResourceAttr("bcrypt_hash.test_update", "tags.1477001604", "tag2"),
+						"bcrypt_hash.test_update", "cost", "10"),
 				),
 			},
 			{
-				Config: testAccCheckItemUpdatePost(),
+				Config: testHashCheckItemUpdatePost(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckBcryptHashExists("bcrypt_hash.test_update"),
+					testHashCheckBcryptHashExists("bcrypt_hash.test_update"),
 					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_update", "cleartext", "test_update"),
+						"bcrypt_hash.test_update", "cleartext", "hello_post_update"),
 					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_update", "description", "updated description"),
-					resource.TestCheckResourceAttr(
-						"bcrypt_hash.test_update", "tags.#", "2"),
-					resource.TestCheckResourceAttr("bcrypt_hash.test_update", "tags.1931743815", "tag1"),
-					resource.TestCheckResourceAttr("bcrypt_hash.test_update", "tags.1477001604", "tag2"),
+						"bcrypt_hash.test_update", "cost", "11"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccItem_Multiple(t *testing.T) {
+
+func TestHash_Multiple(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckItemDestroy,
+		PreCheck:     func() { testHashPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy: testHashCheckItemDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckItemMultiple(),
+				Config: testHashCheckItemMultiple(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckBcryptHashExists("bcrypt_hash.test_item"),
-					testAccCheckBcryptHashExists("bcrypt_hash.another_item"),
+					testHashCheckBcryptHashExists("bcrypt_hash.test_item"),
+					testHashCheckBcryptHashExists("bcrypt_hash.another_item"),
 				),
 			},
 		},
 	})
 }
 
-var whiteSpaceRegex = regexp.MustCompile("name cannot contain whitespace")
-
-func TestAccItem_WhitespaceName(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccCheckItemWhitespace(),
-				ExpectError: whiteSpaceRegex,
-			},
-		},
-	})
-}
-
-func testAccCheckItemDestroy(s *terraform.State) error {
-
+func testHashCheckItemDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "bcrypt_hash" {
 			continue
 		}
-
-		var err error
-
-		if err == nil {
-			return fmt.Errorf("Alert still exists")
-		}
-		notFoundErr := "not found"
-		expectedErr := regexp.MustCompile(notFoundErr)
-		if !expectedErr.Match([]byte(err.Error())) {
-			return fmt.Errorf("expected %s, got %s", notFoundErr, err)
-		}
 	}
-
+	// add any checks for dangling resources created by Terraform
 	return nil
 }
 
-func testAccCheckBcryptHashExists(resource string) resource.TestCheckFunc {
+
+func testHashCheckBcryptHashExists(resource string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -143,7 +107,8 @@ func testAccCheckBcryptHashExists(resource string) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckItemBasic() string {
+
+func testHashCheckItemBasic() string {
 	return fmt.Sprintf(`
 resource "bcrypt_hash" "test_item" {
   cleartext   = "hello"
@@ -151,7 +116,8 @@ resource "bcrypt_hash" "test_item" {
 `)
 }
 
-func testAccCheckItemUpdatePre() string {
+
+func testHashCheckItemUpdatePre() string {
 	return fmt.Sprintf(`
 resource "bcrypt_hash" "test_update" {
   cleartext = "hello_pre_update"
@@ -159,30 +125,26 @@ resource "bcrypt_hash" "test_update" {
 `)
 }
 
-func testAccCheckItemUpdatePost() string {
+
+func testHashCheckItemUpdatePost() string {
 	return fmt.Sprintf(`
 resource "bcrypt_hash" "test_update" {
   cleartext = "hello_post_update"
+	cost      = 11
 }
 `)
 }
 
-func testAccCheckItemMultiple() string {
+
+func testHashCheckItemMultiple() string {
 	return fmt.Sprintf(`
 resource "bcrypt_hash" "test_item" {
   cleartext   = "test"
 }
 
+
 resource "bcrypt_hash" "another_item" {
 	cleartext   = "another_test"
-}
-`)
-}
-
-func testAccCheckItemWhitespace() string {
-	return fmt.Sprintf(`
-resource "bcrypt_hash" "test_item" {
-	cleartext   = "test with whitespace"
 }
 `)
 }
