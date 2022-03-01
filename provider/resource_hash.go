@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"log"
 	"context"
 	"regexp"
 	"golang.org/x/crypto/bcrypt"
@@ -117,7 +116,7 @@ func resourceReadHash(ctx context.Context, d *schema.ResourceData, m interface{}
 func resourceUpdateHash(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	if compareHash(ctx, d.Id(), d.Get("cleartext").(string)) {
-		log.Println("Cleartext unchanged")
+		tflog.Info(ctx, "Cleartext unchanged")
 		return nil
 	}
 
