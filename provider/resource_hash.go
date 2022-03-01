@@ -68,6 +68,15 @@ func resourceHash() *schema.Resource {
 				Description: "The string to hash",
 				ForceNew:    false,
 				Sensitive: 		true,
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if old == new {
+						return true
+					}
+				  if compareHash(d.Id(), new) {
+					  return true
+				  }
+				  return false
+				},
 			},
 			"cost": {
 				Type:        schema.TypeInt,
