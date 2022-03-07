@@ -65,18 +65,9 @@ func resourceHash() *schema.Resource {
 			"cleartext": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The string to hash",
+				Description: "The cleartext value to hash",
 				ForceNew:    false,
-				Sensitive: 		true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if old == new {
-						return true
-					}
-				  if compareHash(d.Id(), new) {
-					  return true
-				  }
-				  return false
-				},
+				Sensitive: 	 true,
 			},
 			"cost": {
 				Type:        schema.TypeInt,
