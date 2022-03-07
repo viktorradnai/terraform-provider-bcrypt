@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -62,6 +63,13 @@ func resourceHash() *schema.Resource {
 	fmt.Print()
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The bcrypt hashed value",
+				ForceNew:    true,
+				Sensitive: 	 false,
+			},
 			"cleartext": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -89,6 +97,17 @@ func resourceHash() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceImportHash,
 		},
+
+		CustomizeDiff: customdiff.ComputedIf("id", func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+      tflog.Info(ctx, d.Get("cleartext").(string))
+			tflog.Info(ctx, d.Id())
+			if compareHash(d.Id(), d.Get("cleartext").(string)) {
+				tflog.Info(ctx, "Hash matched")
+				return false
+			}
+			tflog.Info(ctx, "Hash does not match")
+			return true
+		}),
 	}
 }
 
